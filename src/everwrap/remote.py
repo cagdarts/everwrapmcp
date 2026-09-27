@@ -152,9 +152,11 @@ def main(argv=None):
         serve()
     except KeyboardInterrupt:
         return 130
-    except Exception:
-        print("EverWrapMCP remote server could not start safely. Check configuration, "
-              "secrets and policy.", file=sys.stderr)
+    except Exception as error:
+        # The class name carries no request data, paths or secrets; messages might.
+        print("EverWrapMCP remote server could not start safely "
+              f"({type(error).__name__}). Check configuration, secrets and policy.",
+              file=sys.stderr)
         return 1
     return 0
 
