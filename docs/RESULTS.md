@@ -87,3 +87,19 @@ the original stock-baseline report was not overwritten. Turkish statistical NER
 has since been added. Broader adversarial coverage, exact-output review, and OS
 isolation remain unfinished. Passing these fixtures does not establish that every name, birthday,
 address, secret, or contextual identifier is detected.
+
+## Live client checks — 2026-09-28
+
+Checked by the maintainer on macOS with their own Evernote account; no note text,
+titles or identifiers are recorded here.
+
+- **Claude Code (local stdio):** registered with `claude mcp add`; keyword search
+  returned masked results.
+- **Claude Desktop (local stdio):** manual config loaded and a tool call completed.
+  External edits to the config are only kept when Claude Desktop is quit first.
+- **Self-hosted remote connector (Docker):** claude.ai custom connector completed the
+  passphrase OAuth login; keyword and semantic search returned masked results; the
+  blocked note was denied before any Evernote call; unauthenticated and forged-token
+  requests were refused. Evernote sign-in used the SSH fallback. Browser-based
+  re-linking was deployed afterwards and not yet exercised live.
+- Still outstanding: ChatGPT tunnel, Windows clients, fresh-Mac onboarding.

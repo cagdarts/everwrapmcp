@@ -1,6 +1,9 @@
 # Remote connector (self-hosted, single owner)
 
-**Preview; not yet verified with a live claude.ai connection.** This runs
+**Preview; live tested by one owner on one server** (claude.ai custom connector,
+passphrase login, masked keyword and semantic search, block-list denial). The
+browser-based Evernote re-linking described below is deployed but has not yet been
+exercised in a live session; the SSH fallback has. This runs
 EverWrapMCP in one Docker container on a server you control, so claude.ai (web,
 mobile and Desktop cloud chats) can use it as a custom connector while your
 computer is off. The local stdio setup in [INSTALL.md](INSTALL.md) is unchanged.
