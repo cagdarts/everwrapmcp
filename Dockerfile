@@ -17,7 +17,13 @@ RUN set -eu; \
     uv venv /opt/venv; \
     echo "torch @ https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl --hash=sha256:a09987c95ec4cffdb6df798d3d641558110a334cfccce22f2f046d83142bc260" > /tmp/torch.txt; \
     uv pip install --python /opt/venv/bin/python --require-hashes --no-deps -r /tmp/torch.txt; \
-    uv pip install --python /opt/venv/bin/python --require-hashes -r requirements-image.txt
+    # requirements-live.txt deliberately raises cryptography above presidio's cap
+    # (docs/DEPENDENCY_SECURITY.md). The compiled file records the result but not the
+    # override, so pass the same hashed cryptography entry as an override again.
+    awk '/^cryptography==/{p=1} p{print} p&&!/\\$/{exit}' requirements-image.txt > /tmp/override.txt; \
+    grep -q '^cryptography==' /tmp/override.txt; \
+    uv pip install --python /opt/venv/bin/python --require-hashes \
+      --override /tmp/override.txt -r requirements-image.txt
 COPY src ./src
 # Pinned public Turkish NER weights (skipped when the tr extra is not built).
 RUN if /opt/venv/bin/python -c "import transformers" 2>/dev/null; then \
@@ -33,6 +39,7 @@ COPY --from=build /app/src /app/src
 ENV PATH=/opt/venv/bin:$PATH PYTHONPATH=/app/src HOME=/home/everwrap \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 \
+    XDG_CACHE_HOME=/tmp/cache \
     EVERWRAP_POLICY=/config/policy.json EVERWRAP_DATA_DIR=/data \
     EVERWRAP_CREDENTIAL_KEY_FILE=/run/secrets/credential_key \
     EVERWRAP_PASSPHRASE_HASH_FILE=/run/secrets/passphrase_hash \
