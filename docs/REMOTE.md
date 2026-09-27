@@ -31,6 +31,12 @@ at `https://<your-name>/mcp` and acts as its own OAuth authorization server:
 - Access tokens last 1 hour and are kept in memory; refresh tokens last 30 days, rotate
   on use, and are stored only as hashes in an encrypted file. Tokens are bound to the
   `/mcp` resource and the `everwrap` scope.
+- Evernote sign-in happens in the same browser flow: after the passphrase, if the server
+  has no working Evernote grant (or you tick **Also reconnect Evernote**), the browser
+  goes to Evernote's read-only consent page and returns to `/evernote/callback`. Only a
+  read-only grant is accepted; the PKCE verifier and single-use state stay on the
+  server. When a stored grant stops refreshing, tools answer "Evernote sign-in needed";
+  disconnect and connect the connector in Claude to renew it.
 - Evernote credentials are stored in `/data/evernote-credentials.enc`, encrypted with a
   key mounted from outside the data directory. There is no plaintext fallback.
 - The container runs as uid 10001 with a read-only filesystem, no capabilities, a
@@ -115,20 +121,16 @@ Replace `everwrap.example.com` with your name. Run as root on the server unless 
    systemctl enable --now everwrap-update.timer
    ```
 
-8. **Evernote sign-in** (read-only). On your computer, forward the callback port:
-
-   ```sh
-   ssh -L 8766:127.0.0.1:18766 root@your-server
-   ```
-
-   In that session run `docker exec -it everwrap python -m everwrap.connect`, open the
-   printed link in your computer's browser and approve read-only access. The callback
-   reaches the container through the tunnel. This is a separate grant from your local
-   Keychain one; don't copy local tokens to the server.
-9. **Connect claude.ai:** Settings → Connectors → Add custom connector, URL
+8. **Connect claude.ai:** Settings → Connectors → Add custom connector, URL
    `https://everwrap.example.com/mcp`. Claude opens the EverWrapMCP login page; enter
-   your passphrase. Then test a read of the fictional note and a denial of a blocked ID
-   before widening the policy.
+   your passphrase. On first use the browser continues to Evernote: approve **View**
+   only. You return to Claude connected. This is a separate grant from your local
+   Keychain one; don't copy local tokens to the server. Then test a read of the
+   fictional note and a denial of a blocked ID before widening the policy.
+9. **Fallback sign-in over SSH** (only if the browser flow is unavailable). Forward the
+   callback port with `ssh -L 8766:127.0.0.1:18766 root@your-server`, run
+   `docker exec -it everwrap python -m everwrap.connect` in that session, and open the
+   printed link in your computer's browser.
 
 Keep direct Evernote connectors removed from claude.ai; they bypass this wrapper.
 
@@ -140,5 +142,6 @@ Keep direct Evernote connectors removed from claude.ai; they bypass this wrapper
 | Change the passphrase | Rerun the `hash-passphrase` command from step 4, restore ownership/mode, then `docker restart everwrap` |
 | Sign out every connector session | `rm /var/lib/everwrap/connector-state.enc && docker restart everwrap` |
 | Remove Evernote access | `rm /var/lib/everwrap/evernote-credentials.enc`, and revoke the app in your Evernote account settings |
+| Renew Evernote access | Disconnect and connect the connector in Claude, tick **Also reconnect Evernote** if asked |
 | Pause automatic updates | `systemctl disable --now everwrap-update.timer` |
 | Stop the service | `docker compose -f /opt/everwrap/compose.yaml --env-file /etc/everwrap/compose.env down` |

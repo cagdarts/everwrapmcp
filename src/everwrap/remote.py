@@ -87,10 +87,12 @@ def create_from_environment():
     redirects = [uri.strip() for uri in
                  os.environ.get("EVERWRAP_ALLOWED_REDIRECTS", "").split(",") if uri.strip()]
     credential_store()  # Fail closed now if the Evernote credential store is misconfigured.
+    from .evernote_link import EvernoteLinker
     provider = SingleUserAuthProvider(
         issuer_url=base_url, resource_url=f"{base_url}/mcp", passphrase_hash=passphrase_hash,
         state_file=EncryptedFile(data_dir / "connector-state.enc", key_file),
-        allowed_redirects=redirects or DEFAULT_REDIRECTS)
+        allowed_redirects=redirects or DEFAULT_REDIRECTS,
+        linker=EvernoteLinker(base_url))
     return base_url, policy, ConfiguredService(policy), provider
 
 

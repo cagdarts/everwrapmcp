@@ -1,5 +1,6 @@
 """Private, read-only Evernote transport. No upstream tools are exposed to MCP."""
 
+import threading
 from contextlib import asynccontextmanager
 
 import httpx2
@@ -9,12 +10,19 @@ from mcp.shared.auth import OAuthClientMetadata
 from pydantic import AnyUrl
 
 from .connect import CALLBACK_URL, SERVER_URL, ReadOnlyOAuthProvider, credential_store
-from .service import ProcessingBlocked
+from .service import EvernoteSignInRequired, ProcessingBlocked
+
+
+# Set when the SDK would need interactive Evernote sign-in; the remote login flow
+# reads it to offer re-linking and clears it after a successful link.
+sign_in_required = threading.Event()
 
 
 async def require_setup(*args):
-    # Interactive OAuth belongs in the local setup command, never an MCP response.
-    raise ProcessingBlocked("Run local connection setup.")
+    # Interactive OAuth belongs in the local setup command or the remote login
+    # page, never an MCP response.
+    sign_in_required.set()
+    raise EvernoteSignInRequired("Evernote sign-in needed.")
 
 
 @asynccontextmanager
