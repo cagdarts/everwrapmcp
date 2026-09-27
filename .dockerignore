@@ -1,0 +1,6 @@
+# Allowlist: only the hashed image requirements and src/ are needed.
+# Never send private or local state into the build context.
+*
+!deploy/requirements-image.txt
+!src/
+src/**/__pycache__

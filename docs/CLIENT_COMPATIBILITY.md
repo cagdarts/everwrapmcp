@@ -15,7 +15,7 @@ user's computer. EverWrapMCP supports macOS Keychain and experimental Windows Cr
 | Claude Desktop chat on Mac | Local MCP configuration; a desktop extension could simplify installation later | Manual setup documented; not live tested; no EverWrapMCP extension bundle yet |
 | Claude Code on Mac | Local stdio MCP registration | Documented; not live tested |
 | ChatGPT cloud chat | Private Secure MCP Tunnel to the local wrapper, or an authenticated public HTTPS MCP service | Tunnel setup documented; not live tested; no hosted EverWrapMCP service |
-| Claude web/mobile or cloud remote connector | Authenticated, internet-reachable remote MCP endpoint | Not implemented/tested as an EverWrapMCP deployment |
+| Claude web/mobile or cloud remote connector | Authenticated, internet-reachable remote MCP endpoint | Self-hosted single-owner Docker deployment implemented ([REMOTE.md](REMOTE.md)); not live tested with claude.ai; no hosted service |
 
 ## Windows: upstream compatibility versus wrapper support
 

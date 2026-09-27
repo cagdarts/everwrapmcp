@@ -8,7 +8,7 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientMetadata
 from pydantic import AnyUrl
 
-from .connect import CALLBACK_URL, SERVER_URL, KeychainStore, ReadOnlyOAuthProvider
+from .connect import CALLBACK_URL, SERVER_URL, ReadOnlyOAuthProvider, credential_store
 from .service import ProcessingBlocked
 
 
@@ -26,7 +26,7 @@ async def official_client():
             redirect_uris=[AnyUrl(CALLBACK_URL)],
             token_endpoint_auth_method="none", scope="read",
         ),
-        storage=KeychainStore(), redirect_handler=require_setup, callback_handler=require_setup,
+        storage=credential_store(), redirect_handler=require_setup, callback_handler=require_setup,
     )
     async with httpx2.AsyncClient(auth=auth, timeout=httpx2.Timeout(60, connect=30)) as http:
         async with Client(streamable_http_client(SERVER_URL, http_client=http),

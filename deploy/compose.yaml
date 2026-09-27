@@ -1,0 +1,40 @@
+# Single-owner EverWrapMCP remote connector. Copy to /opt/everwrap/compose.yaml.
+# Real values live only on the server in /etc/everwrap/ (see docs/REMOTE.md):
+#   compose.env        EVERWRAP_PUBLIC_URL, EVERWRAP_IMAGE (pinned digest)
+#   credential.key     Fernet key (outside the data directory)
+#   passphrase.hash    scrypt hash of the connector passphrase
+#   config/policy.json access policy (directory mount survives editor file replacement)
+name: everwrap
+services:
+  everwrap:
+    image: ${EVERWRAP_IMAGE:?set EVERWRAP_IMAGE in /etc/everwrap/compose.env}
+    container_name: everwrap
+    restart: unless-stopped
+    environment:
+      EVERWRAP_PUBLIC_URL: ${EVERWRAP_PUBLIC_URL:?set EVERWRAP_PUBLIC_URL in /etc/everwrap/compose.env}
+    ports:
+      - "127.0.0.1:8790:8000"    # nginx proxies the public HTTPS name here
+      - "127.0.0.1:18766:8766"   # Evernote sign-in callback, reached only via SSH tunnel
+    volumes:
+      - /var/lib/everwrap:/data
+      - /etc/everwrap/config:/config:ro
+    secrets:
+      - credential_key
+      - passphrase_hash
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 1.5
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+secrets:
+  credential_key:
+    file: /etc/everwrap/credential.key
+  passphrase_hash:
+    file: /etc/everwrap/passphrase.hash

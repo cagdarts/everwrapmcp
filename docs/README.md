@@ -11,6 +11,10 @@ Start with the [project overview](../README.md).
 - [Language packs, coverage and model licenses](LANGUAGE_PACKS.md)
 - [Privacy and masking limits](REDACTION.md)
 
+## Self-hosting
+
+- [Remote connector on your own server (Docker)](REMOTE.md)
+
 ## Retrieval reference
 
 - [Choosing a retrieval tool](RETRIEVAL.md)
