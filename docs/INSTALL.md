@@ -105,10 +105,23 @@ and OAuth. There is no Evernote API key to paste into the client configuration.
 
 ## Claude Desktop
 
-In Claude Desktop, open **Settings → Developer → Edit Config**. On macOS this edits
-`~/Library/Application Support/Claude/claude_desktop_config.json`. Merge the following
-entry into any existing `mcpServers` object; keep your other entries. Replace both
-absolute paths with your checkout location. You can run `pwd -P` there to find it.
+On macOS the configuration file is
+`~/Library/Application Support/Claude/claude_desktop_config.json`
+(**Settings → Developer → Edit Config** reveals it).
+
+**Quit Claude Desktop (Command + Q) before editing this file.** While running,
+Claude Desktop keeps the file in memory and periodically rewrites it when its own
+preferences change, silently discarding external `mcpServers` edits. Saving and then
+quitting is not enough: a rewrite can land in between. With Claude Desktop quit, open
+the file from Terminal:
+
+```sh
+open -e ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
+
+Merge the following entry into any existing `mcpServers` object; keep your other
+entries. Replace both absolute paths with your checkout location. You can run
+`pwd -P` there to find it.
 
 ```json
 {
@@ -124,7 +137,10 @@ absolute paths with your checkout location. You can run `pwd -P` there to find i
 }
 ```
 
-Save and fully quit/reopen Claude Desktop. Check that EverWrapMCP exposes
+Save, then reopen Claude Desktop; it reads the file at startup and keeps the entry
+from then on. In **Settings → Developer**, `everwrap` should be listed as running.
+If it is missing, the file was rewritten before you quit; repeat with Claude Desktop
+closed. Check that EverWrapMCP exposes
 `read_safe_note`, `search_safe_notes`, and `semantic_search_safe_notes`. This is local developer configuration,
 not an extension-directory listing or a remote connector URL.
 [Official local-server instructions](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
