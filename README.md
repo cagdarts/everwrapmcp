@@ -46,6 +46,7 @@ You need macOS or Windows, an Evernote account with MCP access, and a compatible
 | Codex | [Local setup](docs/INSTALL.md#codex) · live tested |
 | Claude Desktop / Claude Code | [Desktop](docs/INSTALL.md#claude-desktop) / [Code](docs/INSTALL.md#claude-code) · documented, not live tested |
 | ChatGPT cloud chat | [Private tunnel setup](docs/INSTALL.md#chatgpt) · advanced, not live tested |
+| claude.ai web/mobile (your own server) | [Self-hosted remote connector](docs/REMOTE.md) · advanced, not live tested |
 
 ## Follow the installation guide
 

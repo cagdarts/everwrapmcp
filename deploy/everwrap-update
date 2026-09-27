@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Pull-based deployment: run by everwrap-update.timer on the server. Needs no
+# inbound credentials; pulls the public image tag, redeploys only on a new digest,
+# waits for the health check and rolls back if the new container is not healthy.
+# A digest that failed once is remembered and never retried automatically.
+set -euo pipefail
+
+SOURCE=${EVERWRAP_SOURCE_IMAGE:-ghcr.io/crfgxr/everwrapmcp:main}
+REPOSITORY=${SOURCE%:*}
+ENV_FILE=/etc/everwrap/compose.env
+STATE_DIR=/var/lib/everwrap-update
+REJECTED="$STATE_DIR/rejected"
+COMPOSE=(docker compose -f /opt/everwrap/compose.yaml --env-file "$ENV_FILE")
+
+install -d -m 700 "$STATE_DIR"
+touch "$REJECTED"
+exec 9>/run/everwrap-update.lock
+flock -n 9 || exit 0
+
+docker pull --quiet "$SOURCE" >/dev/null
+new=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$SOURCE" \
+      | grep -m1 "^${REPOSITORY}@sha256:[0-9a-f]\{64\}$" || true)
+current=$(sed -n 's/^EVERWRAP_IMAGE=//p' "$ENV_FILE")
+if [[ -z "$new" || "$new" == "$current" ]] || grep -qxF "$new" "$REJECTED"; then
+  exit 0
+fi
+
+deploy() {
+  sed -i "s|^EVERWRAP_IMAGE=.*|EVERWRAP_IMAGE=$1|" "$ENV_FILE"
+  "${COMPOSE[@]}" up -d --no-build --remove-orphans everwrap >/dev/null
+}
+
+wait_healthy() {
+  local status
+  for _ in $(seq 1 72); do  # up to 6 minutes; model loading takes most of it
+    status=$(docker inspect --format '{{.State.Health.Status}}' everwrap 2>/dev/null || true)
+    [[ "$status" == healthy ]] && return 0
+    [[ "$status" == unhealthy ]] && return 1
+    sleep 5
+  done
+  return 1
+}
+
+echo "Deploying ${new#*@} (previous ${current#*@})"
+if deploy "$new" && wait_healthy; then
+  echo "Healthy: ${new#*@}"
+  # Keep only the running and previous digests for rollback.
+  docker images --digests --format '{{.Repository}}@{{.Digest}}' "$REPOSITORY" \
+    | grep -v -x -F -e "$new" -e "$current" | xargs -r docker image rm >/dev/null 2>&1 || true
+  exit 0
+fi
+
+echo "$new" >> "$REJECTED"
+echo "New image failed to deploy or become healthy; rejected ${new#*@}" >&2
+if [[ -n "$current" ]]; then
+  if deploy "$current" && wait_healthy; then
+    echo "Rolled back to ${current#*@}" >&2
+  else
+    echo "Rollback to ${current#*@} did not become healthy; manual attention needed" >&2
+  fi
+fi
+exit 1

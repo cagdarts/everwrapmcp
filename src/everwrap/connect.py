@@ -7,6 +7,7 @@ Tokens stay in the OS credential store, not configuration files or stdout.
 import asyncio
 import json
 import logging
+import os
 import sys
 import webbrowser
 from pathlib import Path
@@ -68,6 +69,56 @@ class KeychainStore:
     async def set_client_info(self, client_info):
         await asyncio.to_thread(self._keyring.set_password, KEYCHAIN_SERVICE,
                                 "client", client_info.model_dump_json())
+
+
+class EncryptedFileStore:
+    """Headless alternative to KeychainStore; selected only by explicit configuration."""
+
+    def __init__(self, path: Path, key_file: Path):
+        from .secret_store import EncryptedFile
+        self._file = EncryptedFile(path, key_file)
+
+    async def _get(self, field):
+        return (await asyncio.to_thread(self._file.load)).get(field)
+
+    async def _set(self, field, value):
+        def update():
+            data = self._file.load()
+            data[field] = value
+            self._file.save(data)
+        await asyncio.to_thread(update)
+
+    async def get_tokens(self):
+        value = await self._get("tokens")
+        return require_read_only(OAuthToken.model_validate_json(value)) if value else None
+
+    async def set_tokens(self, tokens):
+        require_read_only(tokens)
+        await self._set("tokens", tokens.model_dump_json())
+
+    async def get_client_info(self):
+        value = await self._get("client")
+        return OAuthClientInformationFull.model_validate_json(value) if value else None
+
+    async def set_client_info(self, client_info):
+        await self._set("client", client_info.model_dump_json())
+
+
+def credential_store():
+    """OS credential store by default; encrypted file only when a key file is configured."""
+    key_file = os.environ.get("EVERWRAP_CREDENTIAL_KEY_FILE")
+    if not key_file:
+        return KeychainStore()
+    data_dir = os.environ.get("EVERWRAP_DATA_DIR")
+    if not data_dir:
+        raise RuntimeError("EVERWRAP_DATA_DIR is required with EVERWRAP_CREDENTIAL_KEY_FILE.")
+    return EncryptedFileStore(Path(data_dir) / "evernote-credentials.enc", Path(key_file))
+
+
+def policy_path() -> Path:
+    configured = os.environ.get("EVERWRAP_POLICY")
+    return (Path(configured) if configured
+            else Path(__file__).resolve().parents[2] / ".everwrap-local.json")
 
 
 def parse_callback(target: str, expected_state: str | None) -> AuthorizationCodeResult:
@@ -158,8 +209,7 @@ async def inspect_read_schema(client):
 async def connect():
     # Validate local restrictions before opening any connection. This is not yet
     # a note fetcher; the subsequent adapter must enforce this same policy.
-    root = Path(__file__).resolve().parents[2]
-    SingleNotePolicy.from_file(root / ".everwrap-local.json")
+    SingleNotePolicy.from_file(policy_path())
     callback = LoopbackCallback()
     oauth = ReadOnlyOAuthProvider(
         server_url=SERVER_URL,
@@ -169,10 +219,12 @@ async def connect():
             token_endpoint_auth_method="none",
             scope="read",
         ),
-        storage=KeychainStore(), redirect_handler=callback.open_browser,
+        storage=credential_store(), redirect_handler=callback.open_browser,
         callback_handler=callback.wait,
     )
-    listener = await asyncio.start_server(callback.handle, "127.0.0.1", 8766, limit=8192)
+    # A container publishes this only on host loopback; see docs/REMOTE.md.
+    bind = os.environ.get("EVERWRAP_CALLBACK_HOST", "127.0.0.1")
+    listener = await asyncio.start_server(callback.handle, bind, 8766, limit=8192)
     async with listener:
         async with httpx2.AsyncClient(auth=oauth, timeout=httpx2.Timeout(60, connect=30)) as http:
             transport = streamable_http_client(SERVER_URL, http_client=http)
