@@ -20,7 +20,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements-live.txt pytest
       - run: >-
-          python -m pytest -q tests/test_remote.py tests/test_secret_store.py
+          python -m pytest -q tests/test_remote.py tests/test_secret_store.py tests/test_evernote_link.py
           tests/test_connect.py tests/test_oauth_refresh.py tests/test_server.py
           tests/test_live.py tests/test_stdio.py
 

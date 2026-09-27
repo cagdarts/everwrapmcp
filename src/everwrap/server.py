@@ -10,8 +10,24 @@ from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 
 from .policy import AccessDenied, SingleNotePolicy
-from .service import ProcessingBlocked
+from .service import EvernoteSignInRequired, ProcessingBlocked
 from .live import ConfiguredService
+
+
+def _caused_by(error, kind, depth=0) -> bool:
+    """True if `kind` is the error, inside an exception group, or in its chain.
+
+    The SDK raises from inside task groups and HTTP auth flows, so the original
+    exception can arrive wrapped. Only the type is inspected, never the message.
+    """
+    if error is None or depth > 8:
+        return False
+    if isinstance(error, kind):
+        return True
+    if isinstance(error, BaseExceptionGroup):
+        return any(_caused_by(inner, kind, depth + 1) for inner in error.exceptions)
+    return (_caused_by(error.__cause__, kind, depth + 1)
+            or _caused_by(error.__context__, kind, depth + 1))
 
 
 def build_server(service) -> Server:
@@ -123,10 +139,14 @@ def build_server(service) -> Server:
             encoded = json.dumps(safe, ensure_ascii=False)
         except AccessDenied:
             error = "Request denied by the local note access policy."
-        except ProcessingBlocked:
-            error = "Content blocked: output is disabled or the response could not be safely processed."
-        except Exception:
-            error = "Request could not be safely processed."
+        except Exception as failure:
+            if _caused_by(failure, EvernoteSignInRequired):
+                error = ("Evernote sign-in needed: reconnect EverWrapMCP in your client "
+                         "(remote) or run its connect command (local).")
+            elif isinstance(failure, ProcessingBlocked):
+                error = "Content blocked: output is disabled or the response could not be safely processed."
+            else:
+                error = "Request could not be safely processed."
         if error is not None:
             return types.CallToolResult(content=[types.TextContent(text=error)], isError=True)
         return types.CallToolResult(

@@ -18,6 +18,7 @@ import time
 from collections import deque
 from urllib.parse import urlsplit
 
+import httpx2
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.routing import Route
@@ -100,13 +101,17 @@ def _same_url(a, b) -> bool:
 
 class SingleUserAuthProvider:
     def __init__(self, *, issuer_url: str, resource_url: str, passphrase_hash: str,
-                 state_file=None, allowed_redirects=DEFAULT_REDIRECTS, clock=time.time):
+                 state_file=None, allowed_redirects=DEFAULT_REDIRECTS, clock=time.time,
+                 linker=None):
         self.issuer_url = issuer_url.rstrip("/")
         self.resource_url = resource_url
         self._passphrase = parse_passphrase_hash(passphrase_hash)
         self._state_file = state_file
         self._allowed_redirects = frozenset(allowed_redirects)
         self._clock = clock
+        # Optional EvernoteLinker: sends the browser through Evernote consent after
+        # the passphrase when the stored Evernote grant is missing or stale.
+        self.linker = linker
         self._pending: dict[str, tuple] = {}
         self._codes: dict[str, AuthorizationCode] = {}
         self._access: dict[str, dict] = {}
@@ -206,8 +211,13 @@ class SingleUserAuthProvider:
         return (len(self._failures.get(source, ())) >= MAX_FAILURES
                 or total >= MAX_GLOBAL_FAILURES)
 
-    async def complete_login(self, request_id: str, passphrase: str, source: str = "unknown") -> str:
-        """Return the client redirect URL with a code, or raise PermissionError.
+    async def complete_login(self, request_id: str, passphrase: str, source: str = "unknown",
+                             reconnect_evernote: bool = False) -> str:
+        """Return the next browser URL, or raise PermissionError.
+
+        The URL is the client redirect with a code, or Evernote's consent page when
+        the Evernote grant must be (re)linked first; its callback then calls
+        issue_code() with the same payload.
 
         `source` is the client address; failures are limited per source so one
         attacker cannot lock the owner out, with a global ceiling as a backstop.
@@ -223,7 +233,14 @@ class SingleUserAuthProvider:
             pending = self._pending.pop(request_id, None)  # _locked() pruned expired ones.
         if pending is None:
             raise LookupError
-        client_id, params, _ = pending
+        payload = (pending[0], pending[1])
+        if self.linker is not None and (reconnect_evernote or await self.linker.needed()):
+            return await self.linker.start(payload)
+        return self.issue_code(payload)
+
+    def issue_code(self, payload) -> str:
+        """Issue the authorization code for a login that already passed the passphrase."""
+        client_id, params = payload
         code = secrets.token_urlsafe(32)
         self._codes[code] = AuthorizationCode(
             code=code, scopes=[SCOPE], expires_at=self._clock() + CODE_TTL,
@@ -317,8 +334,11 @@ class SingleUserAuthProvider:
         await self._commit(change)
 
     def redirect_origins(self) -> list[str]:
-        return sorted({f"{urlsplit(uri).scheme}://{urlsplit(uri).netloc}"
-                       for uri in self._allowed_redirects})
+        origins = {f"{urlsplit(uri).scheme}://{urlsplit(uri).netloc}" for uri in self._allowed_redirects}
+        if self.linker is not None:
+            from .evernote_link import EVERNOTE_ISSUER
+            origins.add(EVERNOTE_ISSUER)
+        return sorted(origins)
 
 
 # Login page ----------------------------------------------------------------
@@ -356,11 +376,17 @@ def login_routes(provider: SingleUserAuthProvider) -> list[Route]:
     def _page(body, status=200):
         return _page_with(body, status, headers)
 
-    def form(request_id: str, message: str = "", status: int = 200) -> HTMLResponse:
+    def form(request_id: str, message: str = "", status: int = 200,
+             evernote_next: bool = False) -> HTMLResponse:
         summary = provider.pending_summary(request_id)
         if summary is None:
             return _page("<h1>Sign-in expired</h1><p>Start the connection again from Claude.</p>", 400)
         name, host = (html.escape(value) for value in summary)
+        evernote = ""
+        if provider.linker is not None:
+            evernote = ("<p>Evernote sign-in (read-only) opens next.</p>" if evernote_next else
+                        "<label><input type=checkbox name=reconnect_evernote value=1 "
+                        "style=width:auto> Also reconnect Evernote</label>")
         note = f"<p role=alert><strong>{html.escape(message)}</strong></p>" if message else ""
         return _page(
             "<h1>EverWrapMCP</h1>"
@@ -371,14 +397,17 @@ def login_routes(provider: SingleUserAuthProvider) -> list[Route]:
             "<form method=post action=/login>"
             f"<input type=hidden name=request value='{html.escape(request_id, quote=True)}'>"
             "<label>Passphrase<input type=password name=passphrase autocomplete=current-password "
-            "required autofocus></label><button type=submit>Allow access</button></form>", status)
+            "required autofocus></label>" + evernote + "<button type=submit>Allow access</button></form>",
+            status)
 
     async def login(request: Request) -> Response:
         if request.method == "GET":
-            return form(request.query_params.get("request", ""))
+            evernote_next = provider.linker is not None and await provider.linker.needed()
+            return form(request.query_params.get("request", ""), evernote_next=evernote_next)
         try:
             data = await request.form(max_files=0, max_fields=4, max_part_size=4096)
             request_id, passphrase = data.get("request", ""), data.get("passphrase", "")
+            reconnect = data.get("reconnect_evernote") == "1"
         except Exception:
             return _page("<h1>Invalid request</h1>", 400)
         try:
@@ -386,13 +415,38 @@ def login_routes(provider: SingleUserAuthProvider) -> list[Route]:
             # can only come from the local nginx (see deploy/nginx-everwrap.conf).
             source = request.headers.get("x-real-ip") or (
                 request.client.host if request.client else "unknown")
-            target = await provider.complete_login(request_id, passphrase, source[:64])
+            target = await provider.complete_login(request_id, passphrase, source[:64],
+                                                   reconnect_evernote=reconnect)
         except LookupError:
             return form("")
         except PermissionError as error:
             message = ("Too many failed attempts. Try again later." if str(error) == "locked"
                        else "Incorrect passphrase.")
             return form(request_id, message, 403)
+        # PermissionError (wrong passphrase) is handled above; it subclasses OSError.
+        except (ValueError, OSError, httpx2.HTTPError):
+            return _page("<h1>Evernote sign-in could not start</h1>"
+                         "<p>Try connecting again from Claude.</p>", 502)
         return RedirectResponse(target, status_code=302, headers={"Cache-Control": "no-store"})
 
-    return [Route("/login", login, methods=["GET", "POST"])]
+    async def evernote_callback(request: Request) -> Response:
+        query = request.query_params
+        if provider.linker is None:
+            return _page("<h1>Not found</h1>", 404)
+        if "error" in query:
+            provider.linker.discard(query.get("state"))
+            return _page("<h1>Evernote access was not granted</h1>"
+                         "<p>Start the connection again from Claude.</p>", 400)
+        try:
+            payload = await provider.linker.finish(query.get("state"), query.get("code"),
+                                                   query.get("iss"))
+        except LookupError:
+            return _page("<h1>Sign-in expired</h1><p>Start the connection again from Claude.</p>", 400)
+        except Exception:
+            return _page("<h1>Evernote sign-in did not complete</h1>"
+                         "<p>Start the connection again from Claude.</p>", 502)
+        return RedirectResponse(provider.issue_code(payload), status_code=302,
+                                headers={"Cache-Control": "no-store"})
+
+    return [Route("/login", login, methods=["GET", "POST"]),
+            Route("/evernote/callback", evernote_callback, methods=["GET"])]

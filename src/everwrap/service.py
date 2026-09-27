@@ -16,6 +16,10 @@ class ProcessingBlocked(Exception):
     """A static error safe for a future MCP boundary to convert to a response."""
 
 
+class EvernoteSignInRequired(ProcessingBlocked):
+    """The stored Evernote grant is missing or no longer refreshes."""
+
+
 @dataclass(frozen=True, slots=True)
 class RawNote:
     note_id: str = field(repr=False)
