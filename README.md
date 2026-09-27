@@ -39,14 +39,14 @@ For a blocked note, the wrapper denies access and returns no content.
 ## Get started
 
 You need macOS or Windows, an Evernote account with MCP access, and a compatible client.
-**Codex is not required**, but it is the only client tested live with this project.
+**Codex is not required.** Codex, Claude Code and Claude Desktop have been tested live on macOS.
 
 | Client | Setup and status |
 | --- | --- |
 | Codex | [Local setup](docs/INSTALL.md#codex) · live tested |
-| Claude Desktop / Claude Code | [Desktop](docs/INSTALL.md#claude-desktop) / [Code](docs/INSTALL.md#claude-code) · documented, not live tested |
+| Claude Desktop / Claude Code | [Desktop](docs/INSTALL.md#claude-desktop) / [Code](docs/INSTALL.md#claude-code) · live tested on macOS |
 | ChatGPT cloud chat | [Private tunnel setup](docs/INSTALL.md#chatgpt) · advanced, not live tested |
-| claude.ai web/mobile (your own server) | [Self-hosted remote connector](docs/REMOTE.md) · advanced, not live tested |
+| claude.ai web/mobile (your own server) | [Self-hosted remote connector](docs/REMOTE.md) · advanced, live tested (single owner) |
 
 ## Follow the installation guide
 
@@ -138,7 +138,7 @@ These gaps are known and tracked. Treat them as open, not as solved.
 [Roadmap for these items](docs/IMPROVEMENTS.md) · [Full privacy details](docs/REDACTION.md)
 
 This preview release is not a security sandbox or a one-click product. A fresh-Mac
-onboarding test and live verification of other clients remain outstanding.
+onboarding test and live verification of ChatGPT and Windows clients remain outstanding.
 
 ## For contributors
 

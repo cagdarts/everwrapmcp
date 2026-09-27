@@ -144,8 +144,8 @@ closed. Check that EverWrapMCP exposes
 `read_safe_note`, `search_safe_notes`, and `semantic_search_safe_notes`. This is local developer configuration,
 not an extension-directory listing or a remote connector URL.
 [Official local-server instructions](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
-These setup steps are documentation-checked, but this project's Claude Desktop
-integration has not been tested in a live Claude session.
+This Claude Desktop integration has been verified live on macOS; the config only
+sticks when edited while Claude Desktop is quit (see above).
 
 ## Claude Code
 
@@ -157,8 +157,8 @@ claude mcp add --transport stdio --scope user everwrap --env "PYTHONPATH=$PWD/sr
 
 Open Claude Code and use `/mcp` to inspect the connection. User scope keeps this
 registration out of the project's shared MCP config. This follows the
-[official stdio setup](https://code.claude.com/docs/en/mcp); live Claude verification
-remains outstanding.
+[official stdio setup](https://code.claude.com/docs/en/mcp) and has been verified live
+on macOS.
 
 ## ChatGPT
 
