@@ -263,3 +263,40 @@ def test_other_failures_keep_their_messages():
     assert asyncio.run(call_search(Blocked())).content[0].text.startswith("Content blocked")
     broken = asyncio.run(call_search(Broken())).content[0].text
     assert broken == "Request could not be safely processed." and "secret" not in broken
+
+
+@pytest.mark.parametrize("tool, arguments, hint", [
+    ("semantic_search_safe_notes", {"query": "goals"}, True),
+    ("search_safe_notes", {"query": "garden"}, False),
+    ("read_safe_note", {"note_id": "11111111-1111-4111-8111-111111111111"}, False),
+])
+def test_upstream_tool_errors_get_a_static_unavailable_message(tool, arguments, hint):
+    """Evernote's own error text is never returned; the client learns it is transient."""
+    from types import SimpleNamespace
+    from everwrap.live import NoteService
+    from everwrap.policy import SingleNotePolicy
+
+    canary = "SYNTHETIC_UPSTREAM_DETAIL_DO_NOT_RETURN"
+    failed = SimpleNamespace(is_error=True, structured_content=None,
+                             content=[SimpleNamespace(text=canary)])
+
+    class FailingBackend:
+        async def get_note(self, *a): return failed
+        async def search_notes(self, *a): return failed
+        async def semantic_search(self, *a): return failed
+
+    class Redactor:
+        def sanitize_text(self, text): return text
+        def sanitize_markup(self, text): return text
+
+    policy = SingleNotePolicy(None, frozenset(), "denylist", "redacted")
+    service = NoteService(policy, FailingBackend(), Redactor())
+
+    async def run():
+        async with Client(build_server(service)) as client:
+            return await client.call_tool(tool, arguments)
+    result = asyncio.run(run())
+    text = result.content[0].text
+    assert result.is_error and text.startswith("Evernote could not complete this request right now")
+    assert ("Use search_safe_notes for keyword search" in text) is hint
+    assert canary not in result.model_dump_json()

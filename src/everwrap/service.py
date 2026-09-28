@@ -16,6 +16,10 @@ class ProcessingBlocked(Exception):
     """A static error safe for a future MCP boundary to convert to a response."""
 
 
+class UpstreamUnavailable(ProcessingBlocked):
+    """Evernote reported a tool error; its message is never passed on."""
+
+
 class EvernoteSignInRequired(ProcessingBlocked):
     """The stored Evernote grant is missing or no longer refreshes."""
 

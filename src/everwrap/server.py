@@ -10,7 +10,7 @@ from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 
 from .policy import AccessDenied, SingleNotePolicy
-from .service import EvernoteSignInRequired, ProcessingBlocked
+from .service import EvernoteSignInRequired, ProcessingBlocked, UpstreamUnavailable
 from .live import ConfiguredService
 
 
@@ -143,6 +143,11 @@ def build_server(service) -> Server:
             if _caused_by(failure, EvernoteSignInRequired):
                 error = ("Evernote sign-in needed: reconnect EverWrapMCP in your client "
                          "(remote) or run its connect command (local).")
+            elif _caused_by(failure, UpstreamUnavailable):
+                error = ("Evernote could not complete this request right now (upstream error). "
+                         "Try again later.")
+                if params.name == "semantic_search_safe_notes":
+                    error += " Use search_safe_notes for keyword search meanwhile."
             elif isinstance(failure, ProcessingBlocked):
                 error = "Content blocked: output is disabled or the response could not be safely processed."
             else:
