@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 
 from .policy import AccessDenied, SingleNotePolicy, canonical_note_id
-from .service import ProcessingBlocked
+from .service import ProcessingBlocked, UpstreamUnavailable
 from .upstream import OfficialBackend
 
 
@@ -24,7 +24,9 @@ def bounded_text(value, limit, nullable=False):
 
 def structured(result):
     # Never fall back to upstream text/error/resource content.
-    if result.is_error or type(result.structured_content) is not dict:
+    if result.is_error:
+        raise UpstreamUnavailable("Evernote reported an error.")
+    if type(result.structured_content) is not dict:
         raise ProcessingBlocked("Invalid upstream response.")
     return result.structured_content
 
