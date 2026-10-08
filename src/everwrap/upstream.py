@@ -63,6 +63,13 @@ class OfficialBackend:
         async with self.client_factory() as client:
             return await client.call_tool("get_note", {"noteId": authorized})
 
+    async def search_notebooks(self, query, max_results):
+        if self.policy.access_mode != "denylist" or self.policy.content_mode not in ("unredacted", "redacted"):
+            raise ProcessingBlocked("Notebook listing is not enabled.")
+        async with self.client_factory() as client:
+            return await client.call_tool("search_notebooks", {
+                "query": query, "maxResults": max_results, "sortBy": "name"})
+
     async def search_notes(self, query, sort, start_index, max_results):
         if self.policy.access_mode != "denylist" or self.policy.content_mode not in ("unredacted", "redacted"):
             raise ProcessingBlocked("Account search is not enabled.")

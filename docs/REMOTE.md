@@ -20,7 +20,7 @@ computer is off. The local stdio setup in [INSTALL.md](INSTALL.md) is unchanged.
 
 ## How it works
 
-`python -m everwrap.remote serve` serves the same three tools over Streamable HTTP
+`python -m everwrap.remote serve` serves the same tools over Streamable HTTP
 at `https://<your-name>/mcp` and acts as its own OAuth authorization server:
 
 - claude.ai registers itself (dynamic client registration). Only redirect URIs on an

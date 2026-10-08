@@ -29,7 +29,7 @@ def test_protocol_exposes_only_safe_tools_and_denies_all_content():
         server = build_server(SingleNoteService(SingleNotePolicy(NOTE_ID), backend))
         async with Client(server) as client:
             listing = await client.list_tools()
-            assert {t.name for t in listing.tools} == {"read_safe_note", "search_safe_notes", "semantic_search_safe_notes"}
+            assert {t.name for t in listing.tools} == {"read_safe_note", "search_safe_notes", "semantic_search_safe_notes", "list_safe_notebooks"}
             for tool in listing.tools:
                 assert tool.input_schema["additionalProperties"] is False
                 assert "Evernote" in tool.description

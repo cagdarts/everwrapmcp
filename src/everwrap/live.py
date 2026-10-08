@@ -7,11 +7,21 @@ processes every returned text field without falling back to raw text on errors.
 
 import asyncio
 import math
+import re
 from pathlib import Path
 
 from .policy import AccessDenied, SingleNotePolicy, canonical_note_id
 from .service import ProcessingBlocked, UpstreamUnavailable
 from .upstream import OfficialBackend
+
+MAX_NOTEBOOKS = 100
+NOTEBOOK_ID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
+
+
+def canonical_notebook_id(value):
+    if type(value) is not str or not NOTEBOOK_ID.fullmatch(value):
+        raise AccessDenied("Invalid notebook.")
+    return value.lower()
 
 
 def bounded_text(value, limit, nullable=False):
@@ -75,12 +85,48 @@ class NoteService:
             "content_mode": self.policy.content_mode,
         }
 
-    async def search_safe_notes(self, query, sort="updated_desc", limit=5):
-        if (type(query) is not str or not 1 <= len(query) <= 500 or not query.strip()
+    async def _notebooks(self, query):
+        """Validated upstream notebook rows: (id, label, upstream id). Denylist only."""
+        if self.policy.access_mode != "denylist":
+            raise AccessDenied("Notebooks are not available in single-note mode.")
+        page = structured(await self.backend.search_notebooks(query, MAX_NOTEBOOKS))
+        hits = page.get("hits")
+        if type(hits) is not list or len(hits) > MAX_NOTEBOOKS:
+            raise ProcessingBlocked("Invalid notebook response.")
+        rows = []
+        for hit in hits:
+            if type(hit) is not dict:
+                raise ProcessingBlocked("Invalid notebook hit.")
+            upstream_id = hit.get("notebookId")
+            identity = canonical_notebook_id(upstream_id)
+            rows.append((identity, bounded_text(hit.get("label"), 300), upstream_id))
+        return rows
+
+    async def list_safe_notebooks(self, query="", limit=20):
+        if (type(query) is not str or len(query) > 200 or type(limit) is not int
+                or not 1 <= limit <= MAX_NOTEBOOKS):
+            raise AccessDenied("Invalid notebook request.")
+        self.require_opt_in()
+        rows = await self._notebooks(query.strip())
+        # Names pass through the same masking as titles in redacted mode.
+        return [{"id": identity, "name": await self.text_field(label, 300),
+                 "content_mode": self.policy.content_mode}
+                for identity, label, _ in rows[:limit]]
+
+    async def search_safe_notes(self, query="", sort="updated_desc", limit=5, notebook_id=None):
+        if (type(query) is not str or len(query) > 500
                 or type(limit) is not int or not 1 <= limit <= 10
-                or sort not in ("updated_desc", "updated_asc", "relevance")):
+                or sort not in ("updated_desc", "updated_asc", "relevance")
+                or (notebook_id is None and not query.strip())):
             raise AccessDenied("Invalid search request.")
         self.require_opt_in()
+        if notebook_id is not None:
+            wanted = canonical_notebook_id(notebook_id)
+            matches = [upstream for identity, _, upstream in await self._notebooks("") if identity == wanted]
+            if not matches:
+                raise AccessDenied("Unknown notebook.")
+            # Built locally from a validated GUID, never from upstream query text.
+            query = (f'nbGuid:"{matches[0]}" ' + query.strip()).strip()
         if self.policy.access_mode == "single_note":
             note = await self.read_safe_note(self.policy.allowed_note_id)
             text = (note["title"] + "\n" + note["content"]).casefold()
@@ -206,8 +252,12 @@ class ConfiguredService:
     async def read_safe_note(self, note_id, **selection):
         return await self._run("read_safe_note", note_id=note_id, **selection)
 
-    async def search_safe_notes(self, query, sort="updated_desc", limit=5):
-        return await self._run("search_safe_notes", query=query, sort=sort, limit=limit)
+    async def search_safe_notes(self, query="", sort="updated_desc", limit=5, notebook_id=None):
+        return await self._run("search_safe_notes", query=query, sort=sort, limit=limit,
+                               notebook_id=notebook_id)
+
+    async def list_safe_notebooks(self, query="", limit=20):
+        return await self._run("list_safe_notebooks", query=query, limit=limit)
 
     async def semantic_search_safe_notes(self, query, limit=3):
         return await self._run('semantic_search_safe_notes', query=query, limit=limit)

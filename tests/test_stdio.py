@@ -50,7 +50,8 @@ asyncio.run(main())
         send({'id': 2, 'method': 'tools/list', 'params': {}})
         listing = messages.get(timeout=15)
         assert {t['name'] for t in listing['result']['tools']} == {
-            'read_safe_note', 'search_safe_notes', 'semantic_search_safe_notes'}
+            'read_safe_note', 'search_safe_notes', 'semantic_search_safe_notes', 'list_safe_notebooks'
+        }
         send({'id': 3, 'method': 'tools/call', 'params': {
             'name': 'read_safe_note', 'arguments': {
                 'note_id': '11111111-1111-4111-8111-111111111111'}}})
