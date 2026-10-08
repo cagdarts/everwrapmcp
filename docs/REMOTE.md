@@ -50,7 +50,7 @@ at `https://<your-name>/mcp` and acts as its own OAuth authorization server:
 
 `.github/workflows/remote-image.yml` tests every change, builds the image, starts it
 with fictional secrets and models loaded, and checks that `/mcp` refuses
-unauthenticated requests. Pushes to `main` publish `ghcr.io/crfgxr/everwrapmcp:main`
+unauthenticated requests. Pushes to `main` publish `ghcr.io/cagdarts/everwrapmcp:main`
 and `:sha-<commit>` with a build provenance attestation, using only the workflow's own
 `GITHUB_TOKEN`.
 
@@ -86,14 +86,14 @@ Replace `everwrap.example.com` with your name. Run as root on the server unless 
    install -d -m 700 -o 10001 -g 10001 /etc/everwrap/config /var/lib/everwrap
    cp deploy/compose.yaml deploy/everwrap-update /opt/everwrap/
    cp deploy/everwrap-update.service deploy/everwrap-update.timer /etc/systemd/system/
-   printf 'EVERWRAP_PUBLIC_URL=https://everwrap.example.com\nEVERWRAP_IMAGE=ghcr.io/crfgxr/everwrapmcp:main\n' \
+   printf 'EVERWRAP_PUBLIC_URL=https://everwrap.example.com\nEVERWRAP_IMAGE=ghcr.io/cagdarts/everwrapmcp:main\n' \
      > /etc/everwrap/compose.env
    ```
 
 4. **Secrets** (typed on the server, never pasted into chat or committed):
 
    ```sh
-   IMAGE=ghcr.io/crfgxr/everwrapmcp:main
+   IMAGE=ghcr.io/cagdarts/everwrapmcp:main
    docker pull $IMAGE
    docker run --rm $IMAGE python -m everwrap.remote generate-key > /etc/everwrap/credential.key
    docker run --rm -it --user 0 -v /etc/everwrap:/out $IMAGE \

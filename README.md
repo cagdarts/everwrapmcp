@@ -57,7 +57,7 @@ connect your client.
 
 Or give a coding agent with local terminal access this setup request:
 
-> Help me install https://github.com/crfgxr/everwrapmcp. Follow docs/AGENT_SETUP.md.
+> Help me install https://github.com/cagdarts/everwrapmcp. Follow docs/AGENT_SETUP.md.
 > Ask about my client, note languages and notes to block. Preserve existing settings,
 > start with a fictional test note and masking enabled, and guide me through
 > read-only Evernote sign-in. Verify the connection before claiming it works.
