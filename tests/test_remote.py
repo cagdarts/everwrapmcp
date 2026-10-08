@@ -206,7 +206,7 @@ def test_full_flow_reaches_the_same_three_tools(tmp_path):
         await mcp(client, tokens["access_token"], "notifications/initialized", headers=extra)
         listed = mcp_body(await mcp(client, tokens["access_token"], "tools/list", id_=2, headers=extra))
         assert [t["name"] for t in listed["result"]["tools"]] == [
-            "read_safe_note", "search_safe_notes", "semantic_search_safe_notes"]
+            "read_safe_note", "search_safe_notes", "semantic_search_safe_notes", "list_safe_notebooks"]
         called = mcp_body(await mcp(client, tokens["access_token"], "tools/call",
                                     {"name": "search_safe_notes", "arguments": {"query": "garden"}},
                                     id_=3, headers=extra))

@@ -1,6 +1,6 @@
 # Choosing the right retrieval tool
 
-EverWrapMCP exposes three tools. Their descriptions and MCP server instructions
+EverWrapMCP exposes four tools. Their descriptions and MCP server instructions
 explain which to choose; the client model makes the decision. There is no hidden
 server-side classifier, automatic fan-out, or promise that every client obeys
 these instructions. Access control and masking are enforced in server code.
@@ -8,9 +8,17 @@ these instructions. Access control and masking are enforced in server code.
 | User intent | Starting tool | Follow-up only if needed |
 | --- | --- | --- |
 | Related experiences, recurring themes, coaching, possible approaches | `semantic_search_safe_notes` | Read the most useful permitted matches when snippets lack context |
-| Exact phrase, known title, tag, notebook, or structured date constraints | `search_safe_notes` | Read selected matches |
+| Exact phrase, known title, tag, or structured date constraints | `search_safe_notes` | Read selected matches |
+| A notebook the user names ("in my product notebook") | `list_safe_notebooks`, then `search_safe_notes` with `notebook_id` | Read selected matches |
 | A known note or its newest recognized dated entry | `read_safe_note` (with `view: "latest"` for the entry) | Continue that entry only if its page is incomplete |
 | Explicit test of a named tool | The requested tool, within local policy | Explain separately if another tool is needed to answer accurately |
+
+Notebook names users say rarely match the stored name exactly (language, emoji,
+nesting), so the model lists notebooks, picks the intended one, and passes its id.
+EverWrap builds the notebook filter itself from that validated id; the query may be
+empty to list the notebook's notes. The block list still applies to every result.
+Notebook listing is unavailable in single-note mode, and semantic search cannot be
+limited to a notebook.
 
 For an unknown journal with a known title, start with keyword/title search, then
 read its dated entry. For a semantic-search test involving that journal, use
