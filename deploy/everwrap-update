@@ -5,7 +5,7 @@
 # A digest that failed once is remembered and never retried automatically.
 set -euo pipefail
 
-SOURCE=${EVERWRAP_SOURCE_IMAGE:-ghcr.io/crfgxr/everwrapmcp:main}
+SOURCE=${EVERWRAP_SOURCE_IMAGE:-ghcr.io/cagdarts/everwrapmcp:main}
 REPOSITORY=${SOURCE%:*}
 ENV_FILE=/etc/everwrap/compose.env
 STATE_DIR=/var/lib/everwrap-update

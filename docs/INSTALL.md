@@ -15,7 +15,7 @@ Codex is optional; ordinary ChatGPT cloud chat does not inherit local MCP regist
 Install Git and [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```sh
-git clone https://github.com/crfgxr/everwrapmcp.git
+git clone https://github.com/cagdarts/everwrapmcp.git
 cd everwrapmcp
 uv sync --python 3.12
 uv pip install --python .venv/bin/python -r requirements-live.txt

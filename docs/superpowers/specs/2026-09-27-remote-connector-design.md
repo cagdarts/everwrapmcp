@@ -116,7 +116,7 @@ policy, `.venv`, `.models`, credentials and caches.
 
 - **GitHub Actions** (`.github/workflows/remote-image.yml`): on pull requests, run the
   model-free test suite and build the image without pushing. On pushes to `main`, test,
-  build, and push `ghcr.io/crfgxr/everwrapmcp:main` plus `:sha-<commit>`, with a build
+  build, and push `ghcr.io/cagdarts/everwrapmcp:main` plus `:sha-<commit>`, with a build
   provenance attestation. The workflow uses only the built-in `GITHUB_TOKEN`
   (`packages: write`, `attestations: write`, `id-token: write`). No server credential
   is stored in GitHub.
