@@ -39,7 +39,7 @@ COPY --from=build /app/src /app/src
 ENV PATH=/opt/venv/bin:$PATH PYTHONPATH=/app/src HOME=/home/everwrap \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 \
-    XDG_CACHE_HOME=/tmp/cache \
+    XDG_CACHE_HOME=/tmp/cache EVERWRAP_REDACTION_WORKER_IDLE=900 \
     EVERWRAP_POLICY=/config/policy.json EVERWRAP_DATA_DIR=/data \
     EVERWRAP_CREDENTIAL_KEY_FILE=/run/secrets/credential_key \
     EVERWRAP_PASSPHRASE_HASH_FILE=/run/secrets/passphrase_hash \

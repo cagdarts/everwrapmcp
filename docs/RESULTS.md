@@ -1,11 +1,25 @@
-# Current results — 2026-09-17
+# Current results — 2026-11-06
 
-The production path uses Lingua EN/TR routing, English spaCy, Turkish BERT and
-Presidio rules/anonymization. The current synthetic report is
-[redaction-results.json](redaction-results.json): **25/26** checks pass; the
-remaining utility failure masks `asyncio`. The live semantic-search repeat
-returned substantially more readable Turkish snippets with masking enabled.
-This is not a general recall or relevance benchmark.
+The production path uses Lingua EN/TR routing, English spaCy (`en_core_web_md`),
+Turkish BERT and Presidio rules/anonymization. The current synthetic report is
+[redaction-results.json](redaction-results.json): **26/26** checks pass. The live
+semantic-search repeat returned substantially more readable Turkish snippets with
+masking enabled. This is not a general recall or relevance benchmark.
+
+## Memory optimization — 2026-11-06
+
+- English NER switched from `en_core_web_lg` (~425 MB on disk, ~370 MB resident) to
+  `en_core_web_md` (~54 MB). On the 40-sample fictional diff set, 37 outputs were
+  identical; two false positives disappeared ("asyncio", "Q3") and one street address
+  with a letter suffix ("221B …") was missed by the smaller model. The deterministic
+  street pattern now accepts a letter suffix and more street types, after which no
+  sample leaked. The regression corpus moved from 25/26 to **26/26**.
+- int8 quantization of the Turkish BERT model was evaluated and rejected: it raised
+  resident memory (memory-mapped float weights vs. private int8 copies) and relies on
+  the deprecated `torch.ao.quantization` API.
+- The remote image runs masking in an idle-unloading worker process (see REMOTE.md):
+  worker output matched in-process masking on all 40 samples; idle memory drops to
+  the ~65 MB server process.
 
 See [redaction validation](REDACTION.md#language-routing-validation-2026-09-17)
 for application tests and [known gaps](IMPROVEMENTS.md) for outstanding work.

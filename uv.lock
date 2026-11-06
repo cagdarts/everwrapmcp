@@ -362,11 +362,11 @@ wheels = [
 ]
 
 [[package]]
-name = "en-core-web-lg"
+name = "en-core-web-md"
 version = "3.8.0"
-source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
+source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl" }
 wheels = [
-    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl", hash = "sha256:293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63" },
+    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl", hash = "sha256:5e6329fe3fecedb1d1a02c3ea2172ee0fede6cea6e4aefb6a02d832dba78a310" },
 ]
 
 [[package]]
@@ -392,7 +392,7 @@ de = [
     { name = "de-core-news-md" },
 ]
 en = [
-    { name = "en-core-web-lg" },
+    { name = "en-core-web-md" },
 ]
 es = [
     { name = "es-core-news-md" },
@@ -414,7 +414,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "de-core-news-md", marker = "extra == 'de'", url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_md-3.8.0/de_core_news_md-3.8.0-py3-none-any.whl" },
-    { name = "en-core-web-lg", marker = "extra == 'en'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" },
+    { name = "en-core-web-md", marker = "extra == 'en'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl" },
     { name = "es-core-news-md", marker = "extra == 'es'", url = "https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.8.0/es_core_news_md-3.8.0-py3-none-any.whl" },
     { name = "fr-core-news-md", marker = "extra == 'fr'", url = "https://github.com/explosion/spacy-models/releases/download/fr_core_news_md-3.8.0/fr_core_news_md-3.8.0-py3-none-any.whl" },
     { name = "lingua-language-detector", specifier = "==2.2.0" },

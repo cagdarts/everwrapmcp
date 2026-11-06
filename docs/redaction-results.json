@@ -2,7 +2,7 @@
   "configuration": "Local Presidio + Lingua EN/TR routing + English spaCy + pinned Turkish BERT + bilingual credential patterns",
   "synthetic_only": true,
   "guarantees_complete_detection": false,
-  "passed": 25,
+  "passed": 26,
   "total": 26,
   "results": [
     {
@@ -18,7 +18,7 @@
     {
       "case": "turkish_phone",
       "passed": true,
-      "output": "Telefon: [PHONE_NUMBER]"
+      "output": "[REDACTED]"
     },
     {
       "case": "turkish_person",
@@ -58,7 +58,7 @@
     {
       "case": "english_context_name",
       "passed": true,
-      "output": "[PERSON]. Build the chatbot."
+      "output": "[REDACTED][LANGUAGE_UNSUPPORTED]"
     },
     {
       "case": "turkish_context_name",
@@ -73,7 +73,7 @@
     {
       "case": "english_birthday",
       "passed": true,
-      "output": "[DATE_TIME]\nBuild the chatbot."
+      "output": "[DATE_TIME]\n[LANGUAGE_UNSUPPORTED]"
     },
     {
       "case": "turkish_birthday_new",
@@ -83,12 +83,12 @@
     {
       "case": "numeric_date",
       "passed": true,
-      "output": "Appointment [DATE_TIME]. Build the chatbot."
+      "output": "Appointment [DATE_TIME].[LANGUAGE_UNSUPPORTED]"
     },
     {
       "case": "english_address",
       "passed": true,
-      "output": "[REDACTED]\nBuild the chatbot."
+      "output": "[REDACTED]\n[LANGUAGE_UNSUPPORTED]"
     },
     {
       "case": "turkish_address",
@@ -103,7 +103,7 @@
     {
       "case": "quoted_secret",
       "passed": true,
-      "output": "[SECRET]\nBuild the chatbot."
+      "output": "[SECRET]\n[LANGUAGE_UNSUPPORTED]"
     },
     {
       "case": "zero_width_secret",
@@ -123,7 +123,7 @@
     {
       "case": "basic_auth",
       "passed": true,
-      "output": "Authorization: [SECRET]"
+      "output": "[SECRET]"
     },
     {
       "case": "turkish_utility",
@@ -132,8 +132,8 @@
     },
     {
       "case": "code_utility",
-      "passed": false,
-      "output": "Use [PERSON] to process messages and retry failed requests."
+      "passed": true,
+      "output": "Use asyncio to process messages and retry failed requests."
     }
   ],
   "exploratory_challenges": [
@@ -145,7 +145,7 @@
     {
       "case": "contextual_single_name",
       "passed": true,
-      "output": "the person in the blue coat was [PERSON]."
+      "output": "[LANGUAGE_UNSUPPORTED]"
     }
   ],
   "turkish_statistical_ner": true

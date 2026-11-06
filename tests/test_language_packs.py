@@ -51,7 +51,7 @@ def test_policy_update_preserves_private_settings(tmp_path):
         save_languages(path, ('tr',), original)
     assert SingleNotePolicy.from_file(path).languages == ('en',)
 
-@pytest.mark.parametrize('languages, forbidden', [(('en',), ('transformers','torch')), (('tr',), ('en_core_web_lg',))])
+@pytest.mark.parametrize('languages, forbidden', [(('en',), ('transformers','torch')), (('tr',), ('en_core_web_md', 'en_core_web_lg'))])
 def test_disabled_pack_is_not_imported(monkeypatch, languages, forbidden):
     from everwrap.redaction import PresidioRedactor
     original = builtins.__import__
@@ -77,7 +77,7 @@ def test_setup_installs_only_selected_pack_and_commits_after_smoke(tmp_path, mon
         sanitize_text=lambda _: 'Alex Smith' if fail_smoke else 'Talk to [PERSON] about the community garden.'))
     assert main() == (1 if fail_smoke else 0)
     assert len(calls) == 1 and len(calls[0]) == 6
-    assert 'en_core_web_lg' in calls[0][-1]
+    assert 'en_core_web_md' in calls[0][-1]
     if fail_smoke:
         assert path.read_bytes() == original
     else:
