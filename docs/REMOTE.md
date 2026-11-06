@@ -44,7 +44,11 @@ at `https://<your-name>/mcp` and acts as its own OAuth authorization server:
   key mounted from outside the data directory. There is no plaintext fallback.
 - The container runs as uid 10001 with a read-only filesystem, no capabilities, a
   1.5 GB memory limit, and ports published only on the host's loopback interface.
-  English and Turkish masking used about 600–800 MB after warm-up in testing.
+  Masking models run in a separate worker process that starts on the first request
+  needing masking (about 5–20 s cold start) and exits after 15 idle minutes
+  (`EVERWRAP_REDACTION_WORKER_IDLE=900`), returning its memory. English + Turkish
+  use about 1.1 GB while active and the server about 65 MB while idle. Startup runs
+  a masking self-test in the worker, so a broken model still fails the health check.
 
 ## Continuous deployment
 

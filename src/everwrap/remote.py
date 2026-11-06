@@ -96,12 +96,25 @@ def create_from_environment():
     return base_url, policy, ConfiguredService(policy), provider
 
 
+WARM_UP_TEXT = "Talk to Alex Smith about the garden."
+
+
 def warm_up(policy_path: Path):
-    """Load the configured masking models once, before accepting connections."""
+    """Prove the configured masking models load and mask, before accepting connections.
+
+    With an idle-unloading worker the child is stopped again afterwards, so a broken
+    model still fails the deploy health check without holding memory while idle.
+    """
     policy = SingleNotePolicy.from_file(policy_path)
     if policy.content_mode == "redacted":
-        from .redaction import get_redactor
-        get_redactor(policy.mask_dates, policy.languages).sanitize_text("Warm-up text.")
+        from .redaction import redactor_for
+        redactor = redactor_for(policy.mask_dates, policy.languages)
+        masked = redactor.sanitize_text(WARM_UP_TEXT)
+        if "Alex Smith" in masked and "en" in policy.languages:
+            raise RuntimeError("Masking self-test failed.")
+        stop = getattr(redactor, "stop", None)
+        if stop is not None:
+            stop()
 
 
 def serve():

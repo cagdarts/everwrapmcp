@@ -14,7 +14,7 @@ local policy and cannot be overridden by a note-read or search argument.
 
 | Language | Local model | Model license |
 | --- | --- | --- |
-| English | en_core_web_lg 3.8.0 | MIT |
+| English | en_core_web_md 3.8.0 | MIT |
 | Turkish | akdeniz27/bert-base-turkish-cased-ner, pinned revision | MIT |
 | Spanish | es_core_news_md 3.8.0 | GNU GPL 3.0 |
 | French | fr_core_news_md 3.8.0 | LGPL-LR |

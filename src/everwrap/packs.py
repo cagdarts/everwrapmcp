@@ -1,7 +1,7 @@
 """Static local pack metadata; importing this module loads no models."""
 
 PACKS = {
-    "en": {"name": "English", "packages": ["https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl"],
+    "en": {"name": "English", "packages": ["https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl"],
            "sample": "Talk to Alex Smith about the community garden.", "private": ["Alex", "Smith"]},
     "tr": {"name": "Turkish", "packages": ["transformers==5.17.0", "torch==2.14.0", "safetensors==0.8.0"],
            "sample": "Bugün Ayşe Yılmaz ile konuştum.", "private": ["Ayşe", "Yılmaz"]},
@@ -12,7 +12,7 @@ PACKS = {
     "de": {"name": "German", "model": "de_core_news_md", "license": "MIT",
            "sample": "Gestern habe ich mit Anna Müller über den Gemeinschaftsgarten gesprochen.", "private": ["Anna", "Müller"]},
 }
-PACKS["en"].update(model="en_core_web_lg", license="MIT")
+PACKS["en"].update(model="en_core_web_md", license="MIT")
 PACKS["tr"]["license"] = "MIT"
 for code in ("es", "fr", "de"):
     model = PACKS[code]["model"]

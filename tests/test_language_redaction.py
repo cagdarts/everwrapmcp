@@ -53,9 +53,9 @@ def test_detector_failure_does_not_expose_input():
 
 
 def test_missing_turkish_model_fails_closed(tmp_path, monkeypatch):
-    import en_core_web_lg
+    import en_core_web_md
     from presidio_analyzer import AnalyzerEngine
     from everwrap import language
     monkeypatch.setattr(language, 'MODEL_PATH', tmp_path / 'missing')
     with pytest.raises((OSError, ValueError)):
-        language.LanguageAwareAnalyzer(AnalyzerEngine(), en_core_web_lg.load())
+        language.LanguageAwareAnalyzer(AnalyzerEngine(), en_core_web_md.load())

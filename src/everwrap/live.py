@@ -240,9 +240,9 @@ class ConfiguredService:
             policy.authorize(arguments["note_id"])
         redactor = None
         if policy.content_mode == "redacted":
-            from .redaction import get_redactor
+            from .redaction import redactor_for
             redactor = (await asyncio.to_thread(self.redactor_factory) if self.redactor_factory
-                        else await asyncio.to_thread(get_redactor, policy.mask_dates, policy.languages))
+                        else await asyncio.to_thread(redactor_for, policy.mask_dates, policy.languages))
         service = NoteService(policy, self.backend_factory(policy), redactor)
         result = await getattr(service, operation)(**arguments)
         if SingleNotePolicy.from_file(self.path) != policy:

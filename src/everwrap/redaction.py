@@ -47,7 +47,7 @@ PATTERNS = {
     ],
     "LOCATION": [
         r"(?:^|\n)[ \t]*(?:home address|postal address|address|dirección(?:[ \t]+postal)?|domicilio|adresse(?:[ \t]+postale)?|anschrift|wohnadresse|adres|ev adresi|adresim)[ \t]*[:=][ \t]*[^\n;]{1,300}",
-        r"\b\d{1,6}[ \t]+(?:[\p{L}\d.'’\-]+[ \t]+){0,7}(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Boulevard|Blvd)\b[^\n;]{0,120}",
+        r"\b\d{1,6}[A-Za-z]?[ \t]+(?:[\p{L}\d.'’\-]+[ \t]+){0,7}(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Boulevard|Blvd|Way|Place|Pl|Court|Ct|Square|Sq|Terrace|Highway|Hwy|Parkway|Pkwy)\b[^\n;]{0,120}",
         r"\b[\p{L}'’\-]+(?:[ \t]+[\p{L}'’\-]+){0,3}[ \t]+(?:Mahallesi|Mah\.|Caddesi|Cad\.|Sokağı|Sok\.)[^\n;]{0,200}",
     ],
 }
@@ -120,12 +120,14 @@ class PresidioRedactor:
         from presidio_analyzer.nlp_engine import SpacyNlpEngine
         from presidio_anonymizer import AnonymizerEngine
 
-        engine = SpacyNlpEngine(models=[{"lang_code": "en", "model_name": "en_core_web_lg"}])
+        from .packs import PACKS
+        model_name = PACKS["en"]["model"]
+        engine = SpacyNlpEngine(models=[{"lang_code": "en", "model_name": model_name}])
         # Load an installed package directly. Do not use the provider's automatic
         # download path when a model is absent during a sensitive-content request.
         if "en" in languages:
-            import en_core_web_lg
-            english = en_core_web_lg.load()
+            import importlib
+            english = importlib.import_module(model_name).load()
         else:
             english = spacy.blank("en")
         engine.nlp = {"en": english}
@@ -200,3 +202,24 @@ def get_redactor(mask_dates=True, languages=("en", "tr")):
         redactor.mask_dates = False
         return redactor
     return PresidioRedactor(languages)
+
+
+@lru_cache(maxsize=6)
+def _worker(mask_dates, languages, idle_seconds):
+    from .redaction_worker import WorkerRedactor
+    return WorkerRedactor(mask_dates, languages, idle_seconds=idle_seconds)
+
+
+def redactor_for(mask_dates=True, languages=("en", "tr")):
+    """In-process redactor by default; an idle-unloading worker when configured.
+
+    EVERWRAP_REDACTION_WORKER_IDLE=<seconds> (set in the remote image) keeps the
+    models in a child process that exits after that many idle seconds.
+    """
+    import os
+    idle = os.environ.get("EVERWRAP_REDACTION_WORKER_IDLE")
+    if not idle:
+        return get_redactor(mask_dates, languages)
+    if not idle.isdigit() or int(idle) < 1:
+        raise ProcessingBlocked("Invalid redaction worker setting.")
+    return _worker(mask_dates, tuple(languages), int(idle))
