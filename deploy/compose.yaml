@@ -12,6 +12,8 @@ services:
     restart: unless-stopped
     environment:
       EVERWRAP_PUBLIC_URL: ${EVERWRAP_PUBLIC_URL:?set EVERWRAP_PUBLIC_URL in /etc/everwrap/compose.env}
+      # Optional: digests of service tokens for the owner's own agent (docs/REMOTE.md).
+      # EVERWRAP_SERVICE_TOKEN_HASH_FILE: /config/service-tokens.sha256
     ports:
       - "127.0.0.1:8790:8000"    # nginx proxies the public HTTPS name here
       - "127.0.0.1:18766:8766"   # Evernote sign-in callback, reached only via SSH tunnel

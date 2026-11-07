@@ -12,7 +12,7 @@ import httpx2
 import pytest
 from cryptography.fernet import Fernet
 
-from everwrap.remote import build_app, public_url
+from everwrap.remote import build_app, public_url, service_token_digests
 from everwrap.remote_auth import (ACCESS_TTL, MAX_FAILURES, SingleUserAuthProvider,
                                   hash_passphrase, parse_passphrase_hash, verify_passphrase)
 from everwrap.secret_store import EncryptedFile
@@ -52,13 +52,14 @@ def fake_params():
                           "scopes": None})()
 
 
-def make_provider(tmp_path, clock=None):
+def make_provider(tmp_path, clock=None, service_tokens=()):
     key = tmp_path / "key"
     if not key.exists():
         key.write_bytes(Fernet.generate_key())
     return SingleUserAuthProvider(
         issuer_url=BASE, resource_url=f"{BASE}/mcp", passphrase_hash=HASH,
-        state_file=EncryptedFile(tmp_path / "state.enc", key), clock=clock or Clock())
+        state_file=EncryptedFile(tmp_path / "state.enc", key), clock=clock or Clock(),
+        service_token_digests=[hashlib.sha256(t.encode()).hexdigest() for t in service_tokens])
 
 
 def run_with_client(provider, scenario):
@@ -442,3 +443,36 @@ def test_login_page_allows_redirect_back_to_claude(tmp_path):
         policy = page.headers["content-security-policy"]
         assert "form-action 'self' https://claude.ai https://claude.com;" in policy
     run_with_client(make_provider(tmp_path), scenario)
+
+
+SERVICE_TOKEN = "synthetic-service-token-" + "x" * 24
+
+
+def test_service_token_reaches_the_tools_and_nothing_else_does(tmp_path):
+    async def scenario(client):
+        assert (await initialize(client, SERVICE_TOKEN)).status_code == 200
+        assert (await initialize(client, SERVICE_TOKEN + "y")).status_code == 401
+        assert (await initialize(client, "synthetic-other-token")).status_code == 401
+    run_with_client(make_provider(tmp_path, service_tokens=[SERVICE_TOKEN]), scenario)
+
+
+def test_without_a_service_token_file_only_oauth_tokens_work(tmp_path):
+    async def scenario(client):
+        assert (await initialize(client, SERVICE_TOKEN)).status_code == 401
+    run_with_client(make_provider(tmp_path), scenario)
+
+
+def test_service_token_survives_clock_and_is_bound_to_resource(tmp_path):
+    clock = Clock()
+    provider = make_provider(tmp_path, clock=clock, service_tokens=[SERVICE_TOKEN])
+    clock.now += 10 * 365 * 86400
+    token = asyncio.run(provider.load_access_token(SERVICE_TOKEN))
+    assert token is not None and token.resource == f"{BASE}/mcp" and token.client_id == "service"
+
+
+def test_service_token_hash_file_parsing_fails_closed():
+    digest = hashlib.sha256(b"x").hexdigest()
+    assert service_token_digests(f"# hermes\n{digest}  # agent\n\n") == (digest,)
+    for bad in ("not-a-digest", digest.upper(), digest + "0", "\n".join([digest] * 5)):
+        with pytest.raises(ValueError):
+            service_token_digests(bad)

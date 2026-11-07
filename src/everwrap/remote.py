@@ -10,6 +10,8 @@ files so the public image and repository contain no private values:
   EVERWRAP_CREDENTIAL_KEY_FILE    Fernet key, outside the data directory
   EVERWRAP_PASSPHRASE_HASH_FILE   scrypt hash from `hash-passphrase`
   EVERWRAP_ALLOWED_REDIRECTS      optional comma-separated OAuth redirect URIs
+  EVERWRAP_SERVICE_TOKEN_HASH_FILE  optional: SHA-256 hex digests (one per line, `#` comments)
+                                    of long-lived service tokens, e.g. for the owner's agent
 
 Commands: serve | hash-passphrase | generate-key
 """
@@ -18,6 +20,7 @@ import argparse
 import getpass
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -68,6 +71,25 @@ def build_app(*, base_url: str, service, provider: SingleUserAuthProvider):
     )
 
 
+HEX_DIGEST = re.compile(r"^[0-9a-f]{64}$")
+MAX_SERVICE_TOKENS = 4
+
+
+def service_token_digests(text: str) -> tuple[str, ...]:
+    """Parse the service-token hash file; anything malformed stops the server (fail closed)."""
+    digests = []
+    for line in text.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if not HEX_DIGEST.match(line):
+            raise ValueError("EVERWRAP_SERVICE_TOKEN_HASH_FILE must hold SHA-256 hex digests.")
+        digests.append(line)
+    if len(digests) > MAX_SERVICE_TOKENS:
+        raise ValueError("Too many service tokens.")
+    return tuple(digests)
+
+
 def _required_path(name: str) -> Path:
     value = os.environ.get(name)
     if not value:
@@ -86,13 +108,15 @@ def create_from_environment():
     passphrase_hash = _required_path("EVERWRAP_PASSPHRASE_HASH_FILE").read_text()
     redirects = [uri.strip() for uri in
                  os.environ.get("EVERWRAP_ALLOWED_REDIRECTS", "").split(",") if uri.strip()]
+    service_file = os.environ.get("EVERWRAP_SERVICE_TOKEN_HASH_FILE")
+    service_digests = service_token_digests(Path(service_file).read_text()) if service_file else ()
     credential_store()  # Fail closed now if the Evernote credential store is misconfigured.
     from .evernote_link import EvernoteLinker
     provider = SingleUserAuthProvider(
         issuer_url=base_url, resource_url=f"{base_url}/mcp", passphrase_hash=passphrase_hash,
         state_file=EncryptedFile(data_dir / "connector-state.enc", key_file),
         allowed_redirects=redirects or DEFAULT_REDIRECTS,
-        linker=EvernoteLinker(base_url))
+        linker=EvernoteLinker(base_url), service_token_digests=service_digests)
     return base_url, policy, ConfiguredService(policy), provider
 
 

@@ -102,7 +102,7 @@ def _same_url(a, b) -> bool:
 class SingleUserAuthProvider:
     def __init__(self, *, issuer_url: str, resource_url: str, passphrase_hash: str,
                  state_file=None, allowed_redirects=DEFAULT_REDIRECTS, clock=time.time,
-                 linker=None):
+                 linker=None, service_token_digests=()):
         self.issuer_url = issuer_url.rstrip("/")
         self.resource_url = resource_url
         self._passphrase = parse_passphrase_hash(passphrase_hash)
@@ -112,6 +112,9 @@ class SingleUserAuthProvider:
         # Optional EvernoteLinker: sends the browser through Evernote consent after
         # the passphrase when the stored Evernote grant is missing or stale.
         self.linker = linker
+        # SHA-256 digests of long-lived service tokens (e.g. the owner's own agent on the same
+        # server). Same scope, resource and tools as an OAuth token; revoked by removing the line.
+        self._service_digests = tuple(service_token_digests)
         self._pending: dict[str, tuple] = {}
         self._codes: dict[str, AuthorizationCode] = {}
         self._access: dict[str, dict] = {}
@@ -312,7 +315,11 @@ class SingleUserAuthProvider:
     async def load_access_token(self, token: str) -> AccessToken | None:
         if type(token) is not str:
             return None
-        entry = self._access.get(_digest(token))
+        digest = _digest(token)
+        if any(hmac.compare_digest(digest, known) for known in self._service_digests):
+            return AccessToken(token=token, client_id="service", scopes=[SCOPE],
+                               expires_at=None, resource=self.resource_url, subject="owner")
+        entry = self._access.get(digest)
         if entry is None or entry["expires_at"] <= self._clock():
             return None
         return AccessToken(token=token, client_id=entry["client_id"], scopes=[SCOPE],
