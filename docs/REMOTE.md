@@ -31,6 +31,13 @@ at `https://<your-name>/mcp` and acts as its own OAuth authorization server:
   30 failures in total, all logins pause until the window passes. nginx also limits
   `/login` to 10 requests per minute per address. Existing sessions keep working.
 - Registrations are capped in size and number; signed-in clients are never evicted.
+- Optional service token for the owner's own agent on the same server (e.g. a self-hosted
+  Hermes): set `EVERWRAP_SERVICE_TOKEN_HASH_FILE` to a file with the token's SHA-256 hex digest
+  (one per line, at most 4, `#` comments). That token gets the same scope, resource and
+  read-only tools as an OAuth token, without the browser login. Only the digest is on the
+  EverWrap side; remove the line and restart to revoke it. Generate it on the server so it never
+  passes through chat or a command line, e.g.
+  `python3 -c 'import secrets,hashlib,os; t=secrets.token_urlsafe(32); os.umask(0o077); open("agent.token","w").write(t); open("service-tokens.sha256","w").write(hashlib.sha256(t.encode()).hexdigest()+"\n")'`.
 - Access tokens last 1 hour and are kept in memory; refresh tokens last 30 days, rotate
   on use, and are stored only as hashes in an encrypted file. Tokens are bound to the
   `/mcp` resource and the `everwrap` scope.
